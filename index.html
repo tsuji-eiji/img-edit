@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画像編集</title>
+    <script src="caman.full.min.js"></script>
+    <style>
+        canvas {
+            max-width: 100%;
+            height: auto !important;
+        }
+
+        #control-area {
+            display: none;
+            width: 100%;
+            text-align: right;
+        }
+
+        .controlers {
+            display: grid;
+            grid-template-columns: repeat(1fr 1fr 1fr);
+            grid-column-gap: 0px;
+            grid-row-gap: 0px;
+            text-align: center;
+        }
+
+        #loading-bg {
+            display: none;
+            background-color: #f0f0f0;
+            opacity: 0.5;
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 100vw;
+            z-index: 100;
+        }
+
+        #loading {
+            position: relative;
+            top: 40%;
+            left: 38%;
+            width: 5em;
+            height: 5em;
+            border-radius: 50%;
+            border: 0.25em solid #ccc;
+            border-top-color: #333;
+            animation: spinner 1.0s linear infinite;
+        }
+
+        @keyframes spinner {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media screen and (min-width: 960px) {
+            .controlers {
+                grid-template-columns: repeat(2, 2fr 2fr 1fr);
+                grid-template-rows: repeat(4, 1fr);
+            }
+
+            canvas {
+                margin: 2rem;
+            }
+
+            #control-area {
+                width: 50%;
+            }
+
+            #loading {
+                top: 45%;
+                left: 48%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="input-area">
+        <input type="file" id="file" class="form-control" accept='image/*' onchange="imgSim(this);">
+    </div>
+    <div id="canvas-area">
+        <image id="canvas"></image>
+    </div>
+    <div id="control-area">
+        <div class="controlers">
+            <label for="brightness">輝度</label>
+            <input class="control" type="range" id="brightness" min="-50" max="50" value="0" step="1">
+            <label id="brightness-value">0</label>
+            <label for="contrast">コントラスト</label>
+            <input class="control" type="range" id="contrast" min="-10" max="10" value="0" step="1">
+            <label id="contrast-value">0</label>
+            <label for="saturation">彩度</label>
+            <input class="control" type="range" id="saturation" min="-100" max="100" value="0" step="1">
+            <label id="saturation-value">0</label>
+            <label for="vibrance">自然な彩度</label>
+            <input class="control" type="range" id="vibrance" min="-100" max="100" value="0" step="1">
+            <label id="vibrance-value">0</label>
+            <label for="exposure">露光</label>
+            <input class="control" type="range" id="exposure" min="-100" max="100" value="0" step="1">
+            <label id="exposure-value">0</label>
+            <label for="sharpen">シャープネス</label>
+            <input class="control" type="range" id="sharpen" min="-50" max="50" value="0" step="1">
+            <label id="sharpen-value">0</label>
+        </div>
+        <button id="reset-btn">RESET</button>
+        <button id="dl-btn">DOWNLOAD</button>
+    </div>
+    <div id="loading-bg">
+        <div id="loading"></div>
+    </div>
+</body>
+<script>
+    // 画像シミュレーター
+    function imgSim(input) {
+        // 入力チェック
+        const file = input.files[0];
+        if (!file.type.match(/image/)) {
+            alert("画像ファイルを選んでください");
+            return;
+        }
+
+        // 画像読み込み
+        var fileReader = new FileReader();
+        fileReader.onload = (function (e) {
+            // canvasのコンテキストを取得
+            const canvas = document.getElementById('canvas');
+            canvas.src = e.target.result;
+            const caman = Caman('#canvas');
+            // document.getElementsByClassName("canvas").style = "100%";
+            const controls = document.getElementsByClassName("control");
+
+            // パラメータ部を表示
+            document.getElementById('control-area').style.display = "block";
+            document.getElementById('input-area').style.display = "none";
+
+            // 各パラメータを設定
+            for (let i = 0; i < controls.length; i++) {
+                const control = controls[i];
+                // パラメータ変更時のメソッド
+                control.addEventListener('change', () => {
+                    document.getElementById("loading-bg").style.display = "block";
+                    // フィルターをリセット
+                    caman.reset();
+                    caman.render();
+                    setTimeout(() => {
+                        // パラメータ値を取得
+                        for (let j = 0; j < controls.length; j++) {
+                            const param = controls[j];
+                            document.getElementById(param.id + "-value").textContent = param.value;
+                            caman[param.id](parseInt(param.value));
+                        }
+                        caman.render();
+                        document.getElementById("loading-bg").style.display = "none";
+                    }, 1500);
+                })
+            }
+
+            // リセットボタン
+            document.getElementById('reset-btn').addEventListener('click', () => {
+                // フィルターをリセット
+                caman.reset();
+                caman.render();
+                for (let k = 0; k < controls.length; k++) {
+                    const param = controls[k];
+                    param.value = 0;
+                    document.getElementById(param.id + "-value").textContent = 0;
+                }
+            })
+
+            // DLボタン
+            document.getElementById('dl-btn').addEventListener('click', () => {
+                const canvas = document.getElementById("canvas");
+                const link = document.createElement("a");
+                link.href = canvas.toDataURL("image/png");
+                link.download = "image.png";
+                link.click();
+            })
+        });
+        fileReader.readAsDataURL(file);
+    }
+
+</script>
+
+</html>
